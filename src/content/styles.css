@@ -1,0 +1,341 @@
+/**
+ * YouTube Playlist Enhancer Styles
+ *
+ * Following Constitution Principles:
+ * - I. Content Script Isolation: All classes use "ype-" prefix
+ * - IV. User Experience Preservation: Use YouTube CSS variables
+ */
+
+/* ============================================
+   Search Box
+   ============================================ */
+
+.ype-search-wrapper {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--yt-spec-10-percent-layer, rgba(0, 0, 0, 0.1));
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--yt-spec-general-background-a, #fff);
+}
+
+.ype-search-input {
+  width: 100%;
+  padding: 8px 32px 8px 12px;
+  border: 1px solid var(--yt-spec-10-percent-layer, rgba(0, 0, 0, 0.1));
+  border-radius: 8px;
+  background: var(--yt-spec-badge-chip-background, #f2f2f2);
+  color: var(--yt-spec-text-primary, #0f0f0f);
+  font-size: 14px;
+  font-family: 'Roboto', 'Arial', sans-serif;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.ype-search-input:focus {
+  border-color: var(--yt-spec-call-to-action, #065fd4);
+}
+
+.ype-search-input::placeholder {
+  color: var(--yt-spec-text-secondary, #606060);
+}
+
+.ype-search-clear {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--yt-spec-text-secondary, #606060);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 14px;
+  line-height: 1;
+  display: none;
+}
+
+.ype-search-clear:hover {
+  color: var(--yt-spec-text-primary, #0f0f0f);
+}
+
+/* Clear button hidden - use Escape key instead to avoid dropdown close issues */
+.ype-search-clear--visible {
+  display: none;
+}
+
+/* ============================================
+   Checkbox
+   ============================================ */
+
+.ype-checkbox {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border: 2px solid var(--yt-spec-10-percent-layer, rgba(0, 0, 0, 0.2));
+  border-radius: 4px;
+  margin-left: 16px;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.ype-checkbox:hover {
+  border-color: var(--yt-spec-call-to-action, #065fd4);
+}
+
+.ype-checkbox--checked {
+  background: var(--yt-spec-call-to-action, #065fd4);
+  border-color: var(--yt-spec-call-to-action, #065fd4);
+}
+
+.ype-checkbox-icon {
+  width: 14px;
+  height: 14px;
+  fill: white;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.ype-checkbox--checked .ype-checkbox-icon {
+  opacity: 1;
+}
+
+/* ============================================
+   Footer with Save/Cancel buttons
+   ============================================ */
+
+.ype-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--yt-spec-10-percent-layer, rgba(0, 0, 0, 0.1));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--yt-spec-general-background-a, #fff);
+}
+
+.ype-selected-count {
+  color: var(--yt-spec-text-secondary, #606060);
+  font-size: 13px;
+  font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+.ype-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ype-btn {
+  padding: 8px 16px;
+  border-radius: 18px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'Roboto', 'Arial', sans-serif;
+  cursor: pointer;
+  border: none;
+  transition: all 0.1s ease;
+}
+
+.ype-btn--cancel {
+  background: transparent;
+  color: var(--yt-spec-text-primary, #0f0f0f);
+}
+
+.ype-btn--cancel:hover {
+  background: var(--yt-spec-10-percent-layer, rgba(0, 0, 0, 0.1));
+}
+
+.ype-btn--save {
+  background: var(--yt-spec-call-to-action, #065fd4);
+  color: white;
+}
+
+.ype-btn--save:hover {
+  opacity: 0.9;
+}
+
+.ype-btn--save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ype-btn--loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.ype-btn--loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 50%;
+  left: 50%;
+  margin-left: -8px;
+  margin-top: -8px;
+  border: 2px solid white;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: ype-spin 0.8s linear infinite;
+}
+
+@keyframes ype-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   No Results Message
+   ============================================ */
+
+.ype-no-results {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--yt-spec-text-secondary, #606060);
+  font-size: 14px;
+  font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+/* ============================================
+   Toast Notification
+   ============================================ */
+
+.ype-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Roboto', 'Arial', sans-serif;
+  z-index: 9999;
+  opacity: 0;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ype-toast--visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.ype-toast--success {
+  background: #1a7f37;
+  color: white;
+}
+
+.ype-toast--error {
+  background: #cf222e;
+  color: white;
+}
+
+.ype-toast--info {
+  background: var(--yt-spec-call-to-action, #065fd4);
+  color: white;
+}
+
+/* ============================================
+   List Item Modifications
+   ============================================ */
+
+/* Ensure list items have proper flex layout for checkbox */
+.ype-enhanced yt-list-item-view-model,
+.ype-enhanced ytd-playlist-add-to-option-renderer {
+  display: flex !important;
+  align-items: center !important;
+  cursor: pointer;
+}
+
+/* Hide original checkbox/indicator if present */
+.ype-enhanced [role='checkbox'],
+.ype-enhanced #checkbox {
+  display: none !important;
+}
+
+/* ============================================
+   Hidden Items (filtered out by search)
+   ============================================ */
+
+.ype-hidden {
+  display: none !important;
+}
+
+/* ============================================
+   Dark Mode Adaptive Styles (T037)
+   YouTube uses [dark] attribute on html element for dark mode
+   Most styles already use --yt-spec-* variables which auto-adapt
+   These are additional adjustments for better dark mode support
+   ============================================ */
+
+/* Dark mode: adjust checkbox border for better visibility */
+html[dark] .ype-checkbox {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+html[dark] .ype-checkbox:hover {
+  border-color: var(--yt-spec-call-to-action, #3ea6ff);
+}
+
+/* Dark mode: toast shadow adjustment */
+html[dark] .ype-toast {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Dark mode: search input background */
+html[dark] .ype-search-input {
+  background: var(--yt-spec-badge-chip-background, #272727);
+}
+
+/* Dark mode: search wrapper background */
+html[dark] .ype-search-wrapper {
+  background: var(--yt-spec-general-background-a, #0f0f0f);
+}
+
+/* ============================================
+   Create Playlist Button - Sticky Bottom
+   YouTube uses yt-panel-footer-view-model for the "Create playlist" button
+   The parent DIV needs sticky positioning for proper behavior
+   ============================================ */
+
+/* Target the parent DIV that contains yt-panel-footer-view-model */
+yt-sheet-view-model div:has(> yt-panel-footer-view-model) {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 10;
+  background: var(--yt-spec-general-background-a, #fff);
+}
+
+html[dark] yt-sheet-view-model div:has(> yt-panel-footer-view-model) {
+  background: var(--yt-spec-general-background-a, #0f0f0f);
+}
+
+/* Also apply to the footer element itself for redundancy */
+yt-sheet-view-model yt-panel-footer-view-model {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 10;
+  background: var(--yt-spec-general-background-a, #fff);
+}
+
+html[dark] yt-sheet-view-model yt-panel-footer-view-model {
+  background: var(--yt-spec-general-background-a, #0f0f0f);
+}
+
+/* Legacy wrapper (kept for backwards compatibility) */
+.ype-create-playlist-wrapper {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background: var(--yt-spec-general-background-a, #fff);
+  border-top: 1px solid var(--yt-spec-10-percent-layer, rgba(0, 0, 0, 0.1));
+}
+
+html[dark] .ype-create-playlist-wrapper {
+  background: var(--yt-spec-general-background-a, #0f0f0f);
+}

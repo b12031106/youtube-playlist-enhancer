@@ -1,0 +1,34 @@
+{
+  "name": "youtube-playlist-enhancer",
+  "version": "1.0.0",
+  "description": "增強 YouTube 播放清單儲存功能：支援多選和搜尋篩選",
+  "main": "dist/content/index.js",
+  "scripts": {
+    "dev": "webpack --mode development --watch",
+    "build": "webpack --mode production",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "keywords": [
+    "chrome-extension",
+    "youtube",
+    "playlist",
+    "manifest-v3"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "copy-webpack-plugin": "^12.0.2",
+    "css-loader": "^6.10.0",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "mini-css-extract-plugin": "^2.8.0",
+    "prettier": "^3.2.5",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.4.0",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.4"
+  }
+}

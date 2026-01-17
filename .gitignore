@@ -27,3 +27,10 @@ npm-debug.log*
 
 # Test coverage
 coverage/
+
+# Package files
+*.zip
+
+# Claude Code and Specify directories
+.claude/
+.specify/

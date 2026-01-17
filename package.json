@@ -7,7 +7,15 @@
     "dev": "webpack --mode development --watch",
     "build": "webpack --mode production",
     "lint": "eslint src/**/*.ts",
-    "format": "prettier --write \"src/**/*.ts\""
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "echo \"No tests configured\" && exit 0",
+    "package": "npm run build && zip -r youtube-playlist-enhancer.zip dist/ -x '*.DS_Store' -x '*/.DS_Store'",
+    "version": "node scripts/sync-version.js && git add manifest.json",
+    "release:patch": "npm version patch && git push && git push --tags",
+    "release:minor": "npm version minor && git push && git push --tags",
+    "release:major": "npm version major && git push && git push --tags",
+    "prepare": "husky"
   },
   "keywords": [
     "chrome-extension",
@@ -19,11 +27,12 @@
   "license": "MIT",
   "devDependencies": {
     "@types/chrome": "^0.0.268",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
     "copy-webpack-plugin": "^12.0.2",
     "css-loader": "^6.10.0",
     "eslint": "^8.57.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
+    "husky": "^9.1.7",
     "mini-css-extract-plugin": "^2.8.0",
     "prettier": "^3.2.5",
     "ts-loader": "^9.5.1",

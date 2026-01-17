@@ -1,0 +1,23 @@
+echo "🔍 Running pre-push checks..."
+
+# Run linter
+echo "📝 Checking code style..."
+npm run lint
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ ESLint check failed. Please fix linting errors before pushing."
+  echo "   Run 'npm run lint:fix' to auto-fix some issues."
+  exit 1
+fi
+
+# Build to make sure it compiles
+echo "🔨 Building project..."
+npm run build
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ Build failed. Please fix build errors before pushing."
+  exit 1
+fi
+
+echo ""
+echo "✅ All pre-push checks passed!"

@@ -11,7 +11,7 @@
 import type { SheetCallback } from '../types';
 import { SELECTORS, PLAYLIST_TITLE_PATTERNS, findElement } from './selectors';
 import { logger } from '../utils/logger';
-import { refreshSheet, cleanup as cleanupManagers } from './enhancer';
+import { cleanup as cleanupManagers } from './enhancer';
 
 /** Set of already-enhanced sheets to prevent double-enhancement */
 const enhancedSheets = new WeakSet<Element>();
@@ -426,9 +426,6 @@ export function observePlaylistSheet(callback: SheetCallback): MutationObserver 
     }
   });
 
-  // Debounce timer for content change detection
-  const contentChangeTimers = new WeakMap<Element, number>();
-
   const observeDropdown = (dropdown: Element): void => {
     if (observedDropdowns.has(dropdown)) return;
     observedDropdowns.add(dropdown);
@@ -437,60 +434,6 @@ export function observePlaylistSheet(callback: SheetCallback): MutationObserver 
       attributes: true,
       attributeFilter: ['opened', 'aria-hidden'],
     });
-
-    // CRITICAL: Also observe content changes INSIDE the dropdown
-    // This handles the case where YouTube replaces content while dropdown is open
-    // (e.g., three-dot menu -> playlist sheet transition)
-    // YouTube may modify existing sheet content rather than adding a new sheet
-    //
-    // IMPORTANT: Use debounce to avoid interfering with YouTube's event processing
-    const contentObserver = new MutationObserver(() => {
-      // Clear previous debounce timer
-      const existingTimer = contentChangeTimers.get(dropdown);
-      if (existingTimer) {
-        clearTimeout(existingTimer);
-      }
-
-      // Debounce: wait for DOM mutations to settle before processing
-      const timer = window.setTimeout(() => {
-        // Check if dropdown is currently visible
-        const style = window.getComputedStyle(dropdown);
-        if (style.display === 'none') return;
-
-        // Find the sheet in the dropdown
-        const sheet = dropdown.querySelector(SELECTORS.sheet.primary);
-        if (!sheet) return;
-
-        // Use a simple content fingerprint to detect meaningful changes
-        // Check title text to see if content type changed
-        const titleElement = sheet.querySelector('h2, [slot="title"], #title, .title');
-        const currentContent = titleElement?.textContent || '';
-        const lastProcessedContent = dropdownContentState.get(dropdown) || '';
-
-        // Only process if content actually changed (avoid processing same content multiple times)
-        if (currentContent && currentContent !== lastProcessedContent) {
-          dropdownContentState.set(dropdown, currentContent);
-          logger.info('Dropdown content changed, re-checking for playlist sheet...', {
-            title: currentContent.substring(0, 30),
-          });
-          // Additional delay to ensure YouTube has completed all updates
-          setTimeout(() => processSheet(sheet, callback), 150);
-        }
-      }, 500); // Debounce: 500ms wait for mutations to settle and YouTube's event processing
-
-      contentChangeTimers.set(dropdown, timer);
-    });
-
-    // DISABLED: contentObserver causes issues with YouTube's click handling
-    // When user clicks "Save to playlist" in three-dot menu, our observation
-    // of content changes interferes with YouTube's event processing.
-    // The isOpening handler with delay should be sufficient to detect playlist sheets.
-    //
-    // contentObserver.observe(dropdown, {
-    //   childList: true,
-    //   subtree: true,
-    //   characterData: true,
-    // });
 
     // Check if dropdown is already visible with a sheet
     // Uses quick pre-check for faster response

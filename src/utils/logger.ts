@@ -92,10 +92,7 @@ export const logger = {
    * Error level log
    */
   error(message: string, context?: Record<string, unknown>): void {
-    const entry = createLogEntry('error', message, {
-      ...context,
-      version: EXTENSION_VERSION,
-    });
+    const entry = createLogEntry('error', message, context);
     console.error(formatLogEntry(entry));
   },
 

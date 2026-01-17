@@ -2,6 +2,7 @@ const path = require('path');
 const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const packageJson = require('./package.json');
 
 module.exports = (env, argv) => ({
   entry: {
@@ -32,6 +33,7 @@ module.exports = (env, argv) => ({
   plugins: [
     new webpack.DefinePlugin({
       __NODE_ENV__: JSON.stringify(argv.mode || 'production'),
+      __EXTENSION_VERSION__: JSON.stringify(packageJson.version),
     }),
     new MiniCssExtractPlugin({
       filename: 'content/styles.css',

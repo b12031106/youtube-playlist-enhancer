@@ -67,24 +67,3 @@ export function hideToast(): void {
     currentToast = null;
   }
 }
-
-/**
- * Show success toast
- */
-export function showSuccess(message: string, duration?: number): void {
-  showToast(message, 'success', duration);
-}
-
-/**
- * Show error toast
- */
-export function showError(message: string, duration?: number): void {
-  showToast(message, 'error', duration);
-}
-
-/**
- * Show info toast
- */
-export function showInfo(message: string, duration?: number): void {
-  showToast(message, 'info', duration);
-}

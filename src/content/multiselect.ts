@@ -15,6 +15,9 @@ import { logger } from '../utils/logger';
 import { delay } from '../utils/debounce';
 import { showToast } from './toast';
 
+/** Delay between batch save/remove clicks to avoid rate limiting (ms) */
+const BATCH_CLICK_DELAY_MS = 200;
+
 /**
  * Manages selection state for the current menu session
  */
@@ -462,17 +465,22 @@ export class SelectionManager {
   }
 
   /**
+   * Get the clickable target element for a playlist item
+   * Priority: [role="checkbox"] (legacy) > .yt-list-item-view-model__label (new UI) > element (fallback)
+   */
+  private getClickTarget(element: Element): HTMLElement {
+    return (element.querySelector('[role="checkbox"]') ||
+      element.querySelector('.yt-list-item-view-model__label') ||
+      element) as HTMLElement;
+  }
+
+  /**
    * Batch save to playlists by simulating clicks (T020)
    * YouTube's new UI requires clicking on the label element to trigger save
    */
   private async saveToPlaylists(items: PlaylistItem[]): Promise<void> {
     for (const item of items) {
-      // Find the correct clickable element
-      // Priority: [role="checkbox"] (legacy) > .yt-list-item-view-model__label (new UI) > item.element (fallback)
-      const clickTarget =
-        item.element.querySelector('[role="checkbox"]') ||
-        item.element.querySelector('.yt-list-item-view-model__label') ||
-        item.element;
+      const clickTarget = this.getClickTarget(item.element);
 
       // Store our handler state - this tells our interceptor to let the click through
       item.element.classList.add('ype-saving');
@@ -483,7 +491,7 @@ export class SelectionManager {
       item.element.classList.remove('ype-saving');
 
       // Wait between clicks to avoid rate limiting
-      await delay(200);
+      await delay(BATCH_CLICK_DELAY_MS);
     }
   }
 
@@ -493,17 +501,13 @@ export class SelectionManager {
    */
   private async removeFromPlaylists(items: PlaylistItem[]): Promise<void> {
     for (const item of items) {
-      // Find the correct clickable element (same as saveToPlaylists)
-      const clickTarget =
-        item.element.querySelector('[role="checkbox"]') ||
-        item.element.querySelector('.yt-list-item-view-model__label') ||
-        item.element;
+      const clickTarget = this.getClickTarget(item.element);
 
       item.element.classList.add('ype-saving');
-      (clickTarget as HTMLElement).click();
+      clickTarget.click();
       item.element.classList.remove('ype-saving');
 
-      await delay(200);
+      await delay(BATCH_CLICK_DELAY_MS);
     }
   }
 

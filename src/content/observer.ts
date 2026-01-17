@@ -13,6 +13,22 @@ import { SELECTORS, PLAYLIST_TITLE_PATTERNS, findElement } from './selectors';
 import { logger } from '../utils/logger';
 import { cleanup as cleanupManagers } from './enhancer';
 
+/** Timing constants for dropdown observation */
+const TIMING = {
+  /** Minimal delay for DOM stabilization when sheet is definitely a playlist (ms) */
+  PLAYLIST_ENHANCE_DELAY_MS: 50,
+  /** Initial delay for quick dropdown visibility check (ms) */
+  DROPDOWN_CHECK_INITIAL_MS: 100,
+  /** Fallback delay for uncertain sheet type or slower loads (ms) */
+  DROPDOWN_CHECK_FALLBACK_MS: 300,
+  /** Secondary fallback for very slow loads (ms) */
+  DROPDOWN_CHECK_SECONDARY_MS: 400,
+  /** Interval for re-checking new dropdowns (ms) */
+  DROPDOWN_RECHECK_INTERVAL_MS: 1000,
+  /** Stop re-checking after this duration (ms) */
+  DROPDOWN_RECHECK_TIMEOUT_MS: 30000,
+} as const;
+
 /** Set of already-enhanced sheets to prevent double-enhancement */
 const enhancedSheets = new WeakSet<Element>();
 
@@ -245,12 +261,7 @@ function processSheet(sheet: Element, callback: SheetCallback): void {
 
   if (!isPlaylist) {
     // Check if this sheet has residual enhancement UI from a previous playlist sheet
-    const hasResidualUI =
-      sheet.classList.contains('ype-enhanced') ||
-      !!sheet.querySelector('.ype-search-wrapper') ||
-      !!sheet.querySelector('.ype-checkbox');
-
-    if (hasResidualUI) {
+    if (hasResidualUI(sheet)) {
       // IMPORTANT: First clean up the managers (SelectionManager, SearchManager)
       // This removes event listeners that would otherwise block YouTube's native handlers
       cleanupManagers();
@@ -378,7 +389,7 @@ export function observePlaylistSheet(callback: SheetCallback): MutationObserver 
               if (delayedSheet) {
                 processSheet(delayedSheet, callback);
               }
-            }, 300);
+            }, TIMING.DROPDOWN_CHECK_FALLBACK_MS);
             return;
           }
 
@@ -389,7 +400,7 @@ export function observePlaylistSheet(callback: SheetCallback): MutationObserver 
             case 'playlist':
               // Definitely a playlist sheet - enhance with minimal delay
               // Small delay (50ms) just to let DOM stabilize
-              setTimeout(() => processSheet(sheet, callback), 50);
+              setTimeout(() => processSheet(sheet, callback), TIMING.PLAYLIST_ENHANCE_DELAY_MS);
               break;
 
             case 'not-playlist':
@@ -418,7 +429,7 @@ export function observePlaylistSheet(callback: SheetCallback): MutationObserver 
                   // Still uncertain after delay, do full check
                   processSheet(sheet, callback);
                 }
-              }, 300);
+              }, TIMING.DROPDOWN_CHECK_FALLBACK_MS);
               break;
           }
         }
@@ -472,8 +483,8 @@ export function observePlaylistSheet(callback: SheetCallback): MutationObserver 
 
     // OPTIMIZATION: Use shorter initial delay, with one fallback
     // Most cases are resolved in the first check (100ms)
-    setTimeout(checkDropdownVisibility, 100);
-    setTimeout(checkDropdownVisibility, 400); // Fallback for slower loads
+    setTimeout(checkDropdownVisibility, TIMING.DROPDOWN_CHECK_INITIAL_MS);
+    setTimeout(checkDropdownVisibility, TIMING.DROPDOWN_CHECK_SECONDARY_MS); // Fallback for slower loads
   };
 
   // Observe all existing dropdowns in the entire document
@@ -500,10 +511,10 @@ export function observePlaylistSheet(callback: SheetCallback): MutationObserver 
     if (newCount > 0) {
       logger.info('Found new dropdowns on recheck', { newCount });
     }
-  }, 1000);
+  }, TIMING.DROPDOWN_RECHECK_INTERVAL_MS);
 
-  // Stop rechecking after 30 seconds
-  setTimeout(() => clearInterval(recheckInterval), 30000);
+  // Stop rechecking after timeout
+  setTimeout(() => clearInterval(recheckInterval), TIMING.DROPDOWN_RECHECK_TIMEOUT_MS);
 
   // Also observe document body for new dropdowns being added anywhere
   const bodyObserver = new MutationObserver((mutations) => {

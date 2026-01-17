@@ -17,6 +17,77 @@ import { refreshSheet, cleanup as cleanupManagers } from './enhancer';
 const enhancedSheets = new WeakSet<Element>();
 
 /**
+ * Quick pre-check result type
+ * - 'playlist': Definitely a playlist sheet, can enhance immediately
+ * - 'not-playlist': Definitely NOT a playlist sheet, can cleanup immediately
+ * - 'uncertain': Need more time to determine, use fallback delay
+ */
+type QuickCheckResult = 'playlist' | 'not-playlist' | 'uncertain';
+
+/**
+ * Perform a quick pre-check to determine sheet type
+ * This allows us to act faster in clear-cut cases
+ *
+ * @param sheet The sheet element to check
+ * @returns QuickCheckResult indicating what action to take
+ */
+function quickPreCheck(sheet: Element): QuickCheckResult {
+  // Check for definitive THREE-DOT MENU indicators first (fastest rejection)
+  // Three-dot menus contain ytd-menu-service-item-renderer elements
+  const hasContextMenuItems = !!sheet.querySelector('ytd-menu-service-item-renderer');
+  if (hasContextMenuItems) {
+    logger.debug('quickPreCheck: Detected three-dot menu (has context menu items)');
+    return 'not-playlist';
+  }
+
+  // Check for title element
+  const titleElement = findElement(sheet, SELECTORS.title);
+  if (!titleElement) {
+    // No title yet - DOM might still be loading
+    logger.debug('quickPreCheck: No title element, uncertain');
+    return 'uncertain';
+  }
+
+  const titleText = (titleElement.textContent || '').toLowerCase().trim();
+
+  // Check if title matches playlist patterns
+  const titleMatches = PLAYLIST_TITLE_PATTERNS.some((pattern) =>
+    titleText.includes(pattern.toLowerCase())
+  );
+
+  if (!titleMatches) {
+    // Title doesn't match - definitely not a playlist sheet
+    logger.debug('quickPreCheck: Title does not match patterns', { titleText });
+    return 'not-playlist';
+  }
+
+  // Title matches, now check for playlist structure
+  const hasListContainer = !!sheet.querySelector('yt-list-view-model');
+  const hasListItems = !!sheet.querySelector('yt-list-item-view-model');
+
+  if (!hasListContainer && !hasListItems) {
+    // Title matches but no list structure - might still be loading
+    logger.debug('quickPreCheck: Title matches but no list structure yet, uncertain');
+    return 'uncertain';
+  }
+
+  // All indicators point to playlist sheet
+  logger.debug('quickPreCheck: Detected playlist sheet', { titleText, hasListContainer, hasListItems });
+  return 'playlist';
+}
+
+/**
+ * Check if sheet has residual enhancement UI that needs cleanup
+ */
+function hasResidualUI(sheet: Element): boolean {
+  return (
+    sheet.classList.contains('ype-enhanced') ||
+    !!sheet.querySelector('.ype-search-wrapper') ||
+    !!sheet.querySelector('.ype-checkbox')
+  );
+}
+
+/**
  * Clean up any residual UI elements from previous enhancement
  * This is necessary because YouTube may reuse the same dropdown/sheet element
  * for different menus (e.g., playlist save sheet -> three-dot menu)
@@ -297,17 +368,59 @@ export function observePlaylistSheet(callback: SheetCallback): MutationObserver 
           // Reset content tracking when dropdown opens fresh
           dropdownContentState.delete(dropdown);
 
-          // Use a LONG delay (1 second) to let YouTube fully complete all DOM operations
-          // and event handling before we touch anything.
-          // This avoids interfering with YouTube's click handling when user clicks
-          // "Save to playlist" in the three-dot menu.
-          setTimeout(() => {
-            const sheet = dropdown.querySelector(SELECTORS.sheet.primary);
-            if (sheet) {
-              logger.debug('Delayed check for playlist sheet after opening');
-              processSheet(sheet, callback);
-            }
-          }, 1000);
+          // OPTIMIZATION: Use quick pre-check to determine appropriate delay
+          // This allows us to act much faster in clear-cut cases
+          const sheet = dropdown.querySelector(SELECTORS.sheet.primary);
+          if (!sheet) {
+            // No sheet yet, use fallback delay
+            setTimeout(() => {
+              const delayedSheet = dropdown.querySelector(SELECTORS.sheet.primary);
+              if (delayedSheet) {
+                processSheet(delayedSheet, callback);
+              }
+            }, 300);
+            return;
+          }
+
+          const checkResult = quickPreCheck(sheet);
+          logger.debug('Quick pre-check result on opening', { checkResult });
+
+          switch (checkResult) {
+            case 'playlist':
+              // Definitely a playlist sheet - enhance with minimal delay
+              // Small delay (50ms) just to let DOM stabilize
+              setTimeout(() => processSheet(sheet, callback), 50);
+              break;
+
+            case 'not-playlist':
+              // Definitely NOT a playlist sheet - cleanup immediately if needed
+              if (hasResidualUI(sheet)) {
+                // Immediate cleanup of residual UI
+                cleanupManagers();
+                cleanupResidualUI(sheet);
+                logger.info('Immediate cleanup: not a playlist sheet');
+              }
+              break;
+
+            case 'uncertain':
+              // Not sure yet - use moderate delay and re-check
+              setTimeout(() => {
+                const recheck = quickPreCheck(sheet);
+                logger.debug('Re-check after delay', { recheck });
+
+                if (recheck === 'playlist') {
+                  processSheet(sheet, callback);
+                } else if (recheck === 'not-playlist' && hasResidualUI(sheet)) {
+                  cleanupManagers();
+                  cleanupResidualUI(sheet);
+                  logger.info('Delayed cleanup: confirmed not a playlist sheet');
+                } else if (recheck === 'uncertain') {
+                  // Still uncertain after delay, do full check
+                  processSheet(sheet, callback);
+                }
+              }, 300);
+              break;
+          }
         }
       }
     }
@@ -379,28 +492,45 @@ export function observePlaylistSheet(callback: SheetCallback): MutationObserver 
     //   characterData: true,
     // });
 
-    // Immediately check if dropdown is already visible with a sheet
-    // This handles the case where dropdown is added already in visible state
+    // Check if dropdown is already visible with a sheet
+    // Uses quick pre-check for faster response
     const checkDropdownVisibility = (): void => {
       const style = window.getComputedStyle(dropdown);
       const isVisible = style.display !== 'none';
+      if (!isVisible) return;
+
       const sheet = dropdown.querySelector(SELECTORS.sheet.primary);
-      logger.info('Checking dropdown visibility', {
-        isVisible,
-        hasSheet: !!sheet,
-        display: style.display,
-      });
-      if (isVisible && sheet) {
-        logger.info('Found visible dropdown with sheet, processing...');
-        processSheet(sheet, callback);
+      if (!sheet) return;
+
+      const checkResult = quickPreCheck(sheet);
+      logger.debug('checkDropdownVisibility', { checkResult, isVisible });
+
+      switch (checkResult) {
+        case 'playlist':
+          // Definitely a playlist sheet - process immediately
+          logger.info('Found visible playlist sheet, enhancing...');
+          processSheet(sheet, callback);
+          break;
+
+        case 'not-playlist':
+          // Definitely NOT a playlist sheet - cleanup if needed
+          if (hasResidualUI(sheet)) {
+            cleanupManagers();
+            cleanupResidualUI(sheet);
+            logger.info('Cleaned up residual UI from non-playlist sheet');
+          }
+          break;
+
+        case 'uncertain':
+          // Will be handled by the next check or isOpening handler
+          break;
       }
     };
 
-    // Check after delays to allow YouTube to fully render content
-    // Multiple checks at increasing intervals to catch different scenarios
-    setTimeout(checkDropdownVisibility, 200);
-    setTimeout(checkDropdownVisibility, 500);
-    setTimeout(checkDropdownVisibility, 1000);
+    // OPTIMIZATION: Use shorter initial delay, with one fallback
+    // Most cases are resolved in the first check (100ms)
+    setTimeout(checkDropdownVisibility, 100);
+    setTimeout(checkDropdownVisibility, 400); // Fallback for slower loads
   };
 
   // Observe all existing dropdowns in the entire document

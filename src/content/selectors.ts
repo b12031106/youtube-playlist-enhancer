@@ -39,22 +39,23 @@ export const SELECTORS: Selectors = {
 /**
  * Title patterns for identifying playlist save sheet (multi-language)
  * T036: Extended language support for cross-page compatibility
+ *
+ * IMPORTANT: Only use specific complete phrases to avoid false positives
+ * on video context menus (three-dot menus) which contain generic terms
+ * like "Add to playlist", "Save", etc.
  */
 export const PLAYLIST_TITLE_PATTERNS = [
-  '儲存至', // Traditional Chinese
-  '保存到', // Simplified Chinese
-  'save to', // English
-  'add to playlist', // English alternate
-  'playlist', // Generic
-  'speichern', // German
-  'zu playlist hinzufügen', // German full
-  'guardar', // Spanish
-  'añadir a playlist', // Spanish full
-  'enregistrer', // French
-  'salva in', // Italian
-  '再生リストに保存', // Japanese
-  '재생목록에 저장', // Korean
-  'сохранить', // Russian
+  '儲存至', // Traditional Chinese - "Save to"
+  '保存到', // Simplified Chinese - "Save to"
+  'save to playlist', // English - complete phrase only
+  'save video to', // English - alternate phrasing
+  'zu playlist hinzufügen', // German - full phrase
+  'añadir a playlist', // Spanish - full phrase
+  'ajouter à la playlist', // French - full phrase
+  'aggiungi alla playlist', // Italian - full phrase
+  '再生リストに保存', // Japanese - full phrase
+  '재생목록에 저장', // Korean - full phrase
+  'сохранить в плейлист', // Russian - full phrase
 ];
 
 /**

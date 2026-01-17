@@ -26,6 +26,8 @@ export class SearchManager {
   private _clearButton: HTMLElement | null = null;
   private _noResultsMessage: HTMLElement | null = null;
   private _debouncedFilter: ReturnType<typeof debounce<() => void>> | null = null;
+  // AbortController for reliable event listener cleanup
+  private _abortController: AbortController | null = null;
 
   /**
    * Current search query
@@ -121,9 +123,14 @@ export class SearchManager {
 
   /**
    * Bind search input events
+   * Uses AbortController for reliable cleanup
    */
   private bindSearchEvents(): void {
     if (!this._searchInput || !this._clearButton || !this._searchWrapper) return;
+
+    // Create AbortController for this session
+    this._abortController = new AbortController();
+    const { signal } = this._abortController;
 
     // Prevent ALL events from propagating to YouTube's dropdown
     // YouTube uses various event handlers to detect clicks outside content
@@ -141,19 +148,19 @@ export class SearchManager {
       'pointerup',
       'touchstart',
       'touchend',
-    ];
+    ] as const;
     mouseEvents.forEach((eventType) => {
-      this._searchWrapper!.addEventListener(eventType, stopAllPropagation, true);
+      this._searchWrapper!.addEventListener(eventType, stopAllPropagation, { capture: true, signal });
     });
 
     // Also stop on the input itself
     mouseEvents.forEach((eventType) => {
-      this._searchInput!.addEventListener(eventType, stopAllPropagation, true);
+      this._searchInput!.addEventListener(eventType, stopAllPropagation, { capture: true, signal });
     });
 
     // Prevent focus events from bubbling (YouTube may use these)
-    this._searchInput.addEventListener('focus', stopAllPropagation, true);
-    this._searchInput.addEventListener('focusin', stopAllPropagation, true);
+    this._searchInput.addEventListener('focus', stopAllPropagation, { capture: true, signal });
+    this._searchInput.addEventListener('focusin', stopAllPropagation, { capture: true, signal });
 
     // Input event for filtering
     this._searchInput.addEventListener('input', (e) => {
@@ -162,7 +169,7 @@ export class SearchManager {
       this._query = target.value;
       this.updateClearButtonVisibility();
       this._debouncedFilter?.();
-    });
+    }, { signal });
 
     // Keyboard events - MUST use capture phase to intercept before YouTube
     this._searchInput.addEventListener(
@@ -181,15 +188,17 @@ export class SearchManager {
           }
         }
       },
-      true
-    ); // capture: true
+      { capture: true, signal }
+    );
 
     // Also stop keyup propagation
-    this._searchInput.addEventListener('keyup', stopAllPropagation, true);
+    this._searchInput.addEventListener('keyup', stopAllPropagation, { capture: true, signal });
 
     // Clear button is hidden due to YouTube dropdown close issues
     // Users should use Escape key to clear the search instead
     // The button element is kept for potential future use but not visible
+
+    logger.debug('Search events bound with AbortController');
   }
 
   /**
@@ -271,8 +280,15 @@ export class SearchManager {
 
   /**
    * Clean up resources
+   * Uses AbortController to reliably remove all event listeners
    */
   destroy(): void {
+    // Abort all event listeners first
+    if (this._abortController) {
+      this._abortController.abort();
+      logger.debug('Search event listeners aborted');
+    }
+
     this._debouncedFilter?.cancel();
     this._searchWrapper?.remove();
     this._noResultsMessage?.remove();
@@ -282,6 +298,7 @@ export class SearchManager {
     this._searchInput = null;
     this._clearButton = null;
     this._noResultsMessage = null;
+    this._abortController = null;
   }
 }
 

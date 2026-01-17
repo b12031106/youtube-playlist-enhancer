@@ -24,6 +24,9 @@ export class SelectionManager {
   private _footer: HTMLElement | null = null;
   private _isSaving = false;
   private _listObserver: MutationObserver | null = null;
+  // AbortController for reliable event listener cleanup
+  // Using AbortController ensures all listeners are removed even if DOM elements are replaced
+  private _abortController: AbortController | null = null;
 
   /**
    * Get all items
@@ -278,9 +281,15 @@ export class SelectionManager {
   /**
    * Intercept clicks on playlist items (T018)
    * YouTube may use click, mousedown, or pointerdown - we need to intercept all
+   * Uses AbortController for reliable cleanup even when DOM elements are replaced
    */
   private interceptClicks(): void {
     if (!this._listContainer) return;
+
+    // Create AbortController for this session
+    // Calling abort() will automatically remove all listeners using this signal
+    this._abortController = new AbortController();
+    const { signal } = this._abortController;
 
     // Handler for intercepting user interactions
     const interceptHandler = (e: Event) => {
@@ -310,9 +319,12 @@ export class SelectionManager {
 
     // Intercept all mouse events that YouTube might use
     // Using capture: true to intercept before YouTube's handlers
-    this._listContainer.addEventListener('click', interceptHandler, { capture: true });
-    this._listContainer.addEventListener('mousedown', interceptHandler, { capture: true });
-    this._listContainer.addEventListener('pointerdown', interceptHandler, { capture: true });
+    // Using signal for automatic cleanup via AbortController
+    this._listContainer.addEventListener('click', interceptHandler, { capture: true, signal });
+    this._listContainer.addEventListener('mousedown', interceptHandler, { capture: true, signal });
+    this._listContainer.addEventListener('pointerdown', interceptHandler, { capture: true, signal });
+
+    logger.debug('Click interception installed with AbortController');
   }
 
   /**
@@ -523,8 +535,19 @@ export class SelectionManager {
 
   /**
    * Clean up when sheet is closed
+   * Uses AbortController.abort() to reliably remove all event listeners
    */
   destroy(): void {
+    // Abort all event listeners registered with this controller
+    // This is more reliable than removeEventListener because:
+    // 1. It doesn't require keeping references to handler functions
+    // 2. It works even if DOM elements have been replaced by YouTube
+    // 3. It automatically removes ALL listeners registered with the signal
+    if (this._abortController) {
+      this._abortController.abort();
+      logger.debug('Aborted click intercept event listeners');
+    }
+
     // Disconnect list observer
     this._listObserver?.disconnect();
     this._listObserver = null;
@@ -536,6 +559,7 @@ export class SelectionManager {
     this._listContainer = null;
     this._footer = null;
     this._isSaving = false;
+    this._abortController = null;
   }
 }
 

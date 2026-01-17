@@ -18,16 +18,23 @@ let currentSelectionManager: SelectionManager | null = null;
 /** Current active search manager */
 let currentSearchManager: SearchManager | null = null;
 
-/** Global click interceptor installed */
-let globalClickInterceptorInstalled = false;
+/** AbortController for global interceptors - allows cleanup */
+let globalInterceptorController: AbortController | null = null;
 
 /**
  * Install global event interceptor to prevent YouTube from closing dropdown
  * when interacting with our enhanced UI elements
+ * Uses AbortController for reliable cleanup
  */
 function installGlobalClickInterceptor(): void {
-  if (globalClickInterceptorInstalled) return;
-  globalClickInterceptorInstalled = true;
+  // If already installed, abort previous and reinstall fresh
+  // This ensures clean state on each enhancement cycle
+  if (globalInterceptorController) {
+    globalInterceptorController.abort();
+  }
+
+  globalInterceptorController = new AbortController();
+  const { signal } = globalInterceptorController;
 
   // Capture phase handler for mouse events - runs before YouTube's handlers
   const mouseInterceptor = (e: Event) => {
@@ -89,18 +96,19 @@ function installGlobalClickInterceptor(): void {
 
   // Install on capture phase at window level for maximum priority
   // Window level catches events before document level
-  window.addEventListener('mousedown', mouseInterceptor, true);
-  window.addEventListener('pointerdown', mouseInterceptor, true);
-  window.addEventListener('click', mouseInterceptor, true);
-  window.addEventListener('keydown', keyboardInterceptor, true);
+  // Using signal for automatic cleanup via AbortController
+  window.addEventListener('mousedown', mouseInterceptor, { capture: true, signal });
+  window.addEventListener('pointerdown', mouseInterceptor, { capture: true, signal });
+  window.addEventListener('click', mouseInterceptor, { capture: true, signal });
+  window.addEventListener('keydown', keyboardInterceptor, { capture: true, signal });
 
   // Also install on document for redundancy
-  document.addEventListener('mousedown', mouseInterceptor, true);
-  document.addEventListener('pointerdown', mouseInterceptor, true);
-  document.addEventListener('click', mouseInterceptor, true);
-  document.addEventListener('keydown', keyboardInterceptor, true);
+  document.addEventListener('mousedown', mouseInterceptor, { capture: true, signal });
+  document.addEventListener('pointerdown', mouseInterceptor, { capture: true, signal });
+  document.addEventListener('click', mouseInterceptor, { capture: true, signal });
+  document.addEventListener('keydown', keyboardInterceptor, { capture: true, signal });
 
-  logger.info('Global event interceptor installed (window + document)');
+  logger.info('Global event interceptor installed with AbortController');
 }
 
 /**
@@ -175,8 +183,18 @@ export function enhanceSheet(sheet: Element): void {
 
 /**
  * Clean up current enhancement
+ * Removes all event listeners and UI elements
  */
 export function cleanup(): void {
+  // Clean up global interceptors first
+  // This removes window/document level event listeners
+  if (globalInterceptorController) {
+    globalInterceptorController.abort();
+    globalInterceptorController = null;
+    logger.debug('Global interceptors cleaned up');
+  }
+
+  // Clean up managers
   if (currentSearchManager) {
     currentSearchManager.destroy();
     currentSearchManager = null;

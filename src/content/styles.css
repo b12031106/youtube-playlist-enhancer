@@ -301,29 +301,33 @@ html[dark] .ype-search-wrapper {
    Create Playlist Button - Sticky Bottom
    YouTube uses yt-panel-footer-view-model for the "Create playlist" button
    The parent DIV needs sticky positioning for proper behavior
+
+   IMPORTANT: Only apply to .ype-enhanced sheets to avoid affecting
+   video context menus (three-dot menus) on multi-video pages
    ============================================ */
 
 /* Target the parent DIV that contains yt-panel-footer-view-model */
-yt-sheet-view-model div:has(> yt-panel-footer-view-model) {
+/* Only apply to confirmed playlist sheets marked with .ype-enhanced */
+.ype-enhanced div:has(> yt-panel-footer-view-model) {
   position: sticky !important;
   bottom: 0 !important;
   z-index: 10;
   background: var(--yt-spec-general-background-a, #fff);
 }
 
-html[dark] yt-sheet-view-model div:has(> yt-panel-footer-view-model) {
+html[dark] .ype-enhanced div:has(> yt-panel-footer-view-model) {
   background: var(--yt-spec-general-background-a, #0f0f0f);
 }
 
 /* Also apply to the footer element itself for redundancy */
-yt-sheet-view-model yt-panel-footer-view-model {
+.ype-enhanced yt-panel-footer-view-model {
   position: sticky !important;
   bottom: 0 !important;
   z-index: 10;
   background: var(--yt-spec-general-background-a, #fff);
 }
 
-html[dark] yt-sheet-view-model yt-panel-footer-view-model {
+html[dark] .ype-enhanced yt-panel-footer-view-model {
   background: var(--yt-spec-general-background-a, #0f0f0f);
 }
 

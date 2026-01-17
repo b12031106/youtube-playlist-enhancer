@@ -3,7 +3,7 @@
   "name": "YouTube Playlist Enhancer",
   "version": "1.0.0",
   "description": "增強 YouTube 播放清單儲存功能：支援多選和搜尋篩選",
-  "permissions": ["storage"],
+  "permissions": [],
   "host_permissions": ["*://*.youtube.com/*"],
   "content_scripts": [
     {

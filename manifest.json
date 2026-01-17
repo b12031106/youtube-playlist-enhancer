@@ -1,25 +1,15 @@
 {
   "manifest_version": 3,
   "name": "YouTube Playlist Enhancer",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "增強 YouTube 播放清單儲存功能：支援多選和搜尋篩選",
-  "permissions": [
-    "storage"
-  ],
-  "host_permissions": [
-    "*://*.youtube.com/*"
-  ],
+  "permissions": ["storage"],
+  "host_permissions": ["*://*.youtube.com/*"],
   "content_scripts": [
     {
-      "matches": [
-        "*://*.youtube.com/*"
-      ],
-      "js": [
-        "content/index.js"
-      ],
-      "css": [
-        "content/styles.css"
-      ],
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["content/index.js"],
+      "css": ["content/styles.css"],
       "run_at": "document_idle"
     }
   ],
